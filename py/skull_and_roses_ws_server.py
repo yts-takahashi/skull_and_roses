@@ -33,6 +33,14 @@ async def exit(room_name, player_name, websocket):
         message = json.dumps({"action":"exit", "player_name":player_name, "players":room.get_players_list()})
         await notify(room.name, message)
 
+async def start_game(room_name, player_name):
+    room:Room = ROOMS.get(room_name)
+    if room.game.is_finished:
+        room.game_start()
+        message = json.dumps({"action":"start", "players":room.game.get_status_of_players()})
+        await notify(room_name, message)
+        
+
 async def process(websocket):
     async for message in websocket:
         data = json.loads(message)
@@ -42,8 +50,11 @@ async def process(websocket):
         if action:
             if action["type"] == "enter":
                 await enter(room_name, player_name, websocket)                
-            if action["type"] == "exit":
+            elif action["type"] == "exit":
                 await exit(room_name, player_name, websocket)
+            elif action["type"] == "start":
+                await start_game(room_name, player_name)
+
         else:
             logging.error("unsupported event: {}", data)
 
