@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="../css/room.css">
   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha256-4+XzXVhsDmqanXGHaHvgh1gMQKX40OUvDEBTu8JcmNs=" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
   <script type="text/javascript" src="../js/util.js"></script>
@@ -18,6 +19,16 @@
         {{ player.name }}
       </li>
     </ol>
+  </div>
+  <div id="action1">
+    <input type="text" id="input_num">
+    <button id="down_button">Down</button>
+    <button id="bid_button">Bid</button>
+    <button id="pass_button">Pass</button>
+  </div>
+  <div id="action2">
+    <input type="text" id="input_player">
+    <button id="reveal_button">Reveal</button>
   </div>
   <button id="start_button">ゲームスタート</button>
   <button id="exit_button">部屋から出る</button>

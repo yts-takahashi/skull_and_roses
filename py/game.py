@@ -1,24 +1,46 @@
 import random
-from user_status import UserStatus
+from collections import OrderedDict
+from player import Player
+
+
 class Game:
-  def __init__(self):
-    self.round = 0
-    self.is_finished = True
+    def __init__(self):
+        self.round = 0
+        self.is_finished = True
 
-  def start(self, players):
-    self.round = 1
-    self.is_finished = False
-    self.statuses = [UserStatus(player) for player in players]
-    random.shuffle(self.statuses)
+    def start(self, players):
+        self.round = 0
+        self.is_finished = False
+        randomized_player_names = random.sample(list(players), len(players))
+        self.players: OrderedDict[str: Player] = OrderedDict({player_name: Player(player_name) for player_name in randomized_player_names})
+        self.start_round()
 
-  def end(self):
-    self.is_finished = True
+    def end(self):
+        self.is_finished = True
 
-  def get_status_of_players(self, mode="game"):
-    # if mode=="game":
-    #   return [{"name":str(status.player_name), "place":i, "down_cards":status.cards, "is_passed":status.is_passed, "win":status.win} for i,status in enumerate(self.statuses)]
-    # else:
-    # return [{"name":str(status.player_name), "place":i, "cards":status.cards, "is_passed":status.is_passed, "win":status.win} for i,status in enumerate(self.statuses)]
-    # return [{"name":str(status.player_name), "place":i, "cards":status.cards, "is_passed":status.is_passed, "win":status.win} for i,status in enumerate(self.statuses)]
-    return [{"name":str(status.player_name)} for i,status in enumerate(self.statuses)]
-    
+    def start_round(self):
+        self.turn: list[str] = list(self.players.keys())
+        self.round += 1
+        self.phase = "down"  # bid, reveal
+
+    def get_status_of_players(self, mode="game"):
+        return [{"name": player.name, "status": player.as_dict()} for player in self.players.values()]
+        
+    def down(self, player_name, card_num):
+        try:
+            if self.is_finished:
+                return False
+            if self.phase == "down":
+                return False
+            if player_name != self.turn[0]:
+                return False
+            cards = self.players[player_name].cards
+            card_num = int(card_num)
+            if cards[card_num] != 0:
+                return False
+
+            self.turn.append(self.turn.pop(0))
+            cards[card_num] = 1
+            return True
+        except:
+            return False

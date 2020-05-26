@@ -4,42 +4,56 @@ import json
 import logging
 import websockets
 
-from player import Player
 from room import Room
 
 logging.basicConfig()
 
 ROOMS = {}
 
-async def notify(room_name, message):
-    room = ROOMS.get(room_name)
+
+async def notify(room: Room, message):
     players = room.players
-    await asyncio.wait([player.websocket.send(message) for player in players.values()])
+    await asyncio.wait([ws.send(message) for ws in players.values()])
 
-async def enter(room_name, player_name, websocket):
-    player = Player(player_name, websocket)
-    # Get the room or create it if it doesn't exist.
-    room = ROOMS.get(room_name, Room(room_name))
-    ROOMS[room_name] = room
 
-    room.admit(player)
-    message = json.dumps({"action":"enter", "player_name":player_name, "players":room.get_players_list()})
-    await notify(room.name, message)
+def enter(room: Room, player_name, websocket):
+    # player enter the room.
+    room.admit(player_name, websocket)
+    # notify all users in the room that new player comes.
+    message = json.dumps({"action": "enter", "player_name": player_name, "players": room.get_players_list()})
+    return message
 
-async def exit(room_name, player_name, websocket):
-    room = ROOMS.get(room_name)
+
+def exit(room: Room, player_name, websocket):
     if room:
         room.exclude(player_name)
-        message = json.dumps({"action":"exit", "player_name":player_name, "players":room.get_players_list()})
-        await notify(room.name, message)
+        message = json.dumps({"action": "exit", "player_name": player_name, "players": room.get_players_list()})
+        return message
 
-async def start_game(room_name, player_name):
-    room:Room = ROOMS.get(room_name)
+
+def start_game(room: Room, player_name):
     if room.game.is_finished:
         room.game_start()
-        message = json.dumps({"action":"start", "players":room.game.get_status_of_players()})
-        await notify(room_name, message)
-        
+        message = json.dumps({"action": "start", "players": room.game.get_status_of_players()})
+        return message
+
+
+def down(room: Room, player_name, card):
+    game = room.game
+    if game.down(player_name, card):
+        message = json.dumps({"action": "down", "player_name": player_name, "players": room.game.get_status_of_players()})
+        return message
+
+
+def getRoom(room_name) -> Room:
+    # Get the room or create it if it doesn't exist.
+    room: Room = ROOMS.get(room_name)
+    if not room:
+        room = Room()
+        ROOMS[room_name] = room
+
+    return room
+
 
 async def process(websocket):
     async for message in websocket:
@@ -48,22 +62,33 @@ async def process(websocket):
         player_name = data["player"]
         action = data.get("action")
         if action:
+            room: Room = getRoom(room_name)
+            message = ""
             if action["type"] == "enter":
-                await enter(room_name, player_name, websocket)                
+                message = enter(room, player_name, websocket)
             elif action["type"] == "exit":
-                await exit(room_name, player_name, websocket)
+                message = exit(room, player_name, websocket)
             elif action["type"] == "start":
-                await start_game(room_name, player_name)
+                message = start_game(room, player_name)
+            elif action["type"] == "down":
+                message = down(room, player_name, action["card"])
+            # elif action["type"] == "bid":
+            #     await bid(room, player_name, action["num"])
+            # elif action["type"] == "pass":
+            #     await pass_turn(room, player_name)
+            # elif action["type"] == "reveal":
+            #     await reveal(room, player_name, action["player"])
+
+            if message:
+                await notify(room, message)
 
         else:
             logging.error("unsupported event: {}", data)
 
+
 async def skull_and_roses(websocket, path):
     logging.info(websocket)
-    try:
-        await process(websocket)
-    except:
-        pass
+    await process(websocket)
 
 start_server = websockets.serve(skull_and_roses, "localhost", 5000)
 
