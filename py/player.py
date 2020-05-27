@@ -3,7 +3,7 @@ class Player:
         self.name = name
         self.win = 0
         self.cards = [0, 0, 0, 0]
-        self.bid = 0
+        self.declared_number = 0
 
     def as_dict(self, purpose="game"):
         if purpose == "game":
@@ -16,7 +16,7 @@ class Player:
                     "down": cards.count(1),
                     "up": [i for i, card in enumerate(cards) if card == 2]
                 },
-                "bid": self.bid
+                "bid": self.declared_number
             }
             return result
 

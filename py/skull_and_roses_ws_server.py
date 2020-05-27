@@ -45,6 +45,20 @@ def down(room: Room, player_name, card):
         return message
 
 
+def bid(room: Room, player_name, number):
+    game = room.game
+    if game.bid(player_name, number):
+        message = json.dumps({"action": "bid", "player_name": player_name, "number": number, "players": room.game.get_status_of_players()})
+        return message
+
+
+def pass_turn(room: Room, player_name):
+    game = room.game
+    if game.pass_turn(player_name):
+        message = json.dumps({"action": "pass", "player_name": player_name, "players": room.game.get_status_of_players()})
+        return message
+
+
 def getRoom(room_name) -> Room:
     # Get the room or create it if it doesn't exist.
     room: Room = ROOMS.get(room_name)
@@ -56,34 +70,36 @@ def getRoom(room_name) -> Room:
 
 
 async def process(websocket):
-    async for message in websocket:
-        data = json.loads(message)
-        room_name = data["room"]
-        player_name = data["player"]
-        action = data.get("action")
-        if action:
-            room: Room = getRoom(room_name)
-            message = ""
-            if action["type"] == "enter":
-                message = enter(room, player_name, websocket)
-            elif action["type"] == "exit":
-                message = exit(room, player_name, websocket)
-            elif action["type"] == "start":
-                message = start_game(room, player_name)
-            elif action["type"] == "down":
-                message = down(room, player_name, action["card"])
-            # elif action["type"] == "bid":
-            #     await bid(room, player_name, action["num"])
-            # elif action["type"] == "pass":
-            #     await pass_turn(room, player_name)
-            # elif action["type"] == "reveal":
-            #     await reveal(room, player_name, action["player"])
+    try:
+        async for message in websocket:
+            data = json.loads(message)
+            room_name = data["room"]
+            player_name = data["player"]
+            action = data.get("action")
+            if action:
+                room: Room = getRoom(room_name)
+                message = ""
+                if action["type"] == "enter":
+                    message = enter(room, player_name, websocket)
+                elif action["type"] == "exit":
+                    message = exit(room, player_name, websocket)
+                elif action["type"] == "start":
+                    message = start_game(room, player_name)
+                elif action["type"] == "down":
+                    message = down(room, player_name, action["card"])
+                elif action["type"] == "bid":
+                    message = bid(room, player_name, action["num"])
+                elif action["type"] == "pass":
+                    message = pass_turn(room, player_name)
+                # elif action["type"] == "reveal":
+                #     message = reveal(room, player_name, action["player"])
 
-            if message:
-                await notify(room, message)
-
-        else:
-            logging.error("unsupported event: {}", data)
+                if message:
+                    await notify(room, message)
+                else:
+                    logging.error("unsupported event: {}", data)
+    except Exception:
+        logging.error("unsupported event: {}", data)
 
 
 async def skull_and_roses(websocket, path):
